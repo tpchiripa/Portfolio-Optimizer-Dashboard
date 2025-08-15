@@ -1,4 +1,4 @@
-# 📈 Portfolio Optimizer Dashboard
+# Portfolio Optimizer Dashboard
 
 ## Overview
 The Portfolio Optimizer Dashboard is an **interactive Streamlit app** designed to help users analyze, optimize, and manage investment portfolios. It allows for **portfolio backtesting, risk analysis, and performance evaluation** using modern financial techniques such as Monte Carlo simulations, CAPM-style regression, PCA, and multicollinearity diagnostics. Whether for personal finance, academic learning, or professional analysis, this dashboard provides actionable insights into portfolio performance and risk.
@@ -7,7 +7,7 @@ The Portfolio Optimizer Dashboard is an **interactive Streamlit app** designed t
 
 ---
 
-## 🚀 Features
+##  Features
 - **Portfolio Backtesting** with adjustable weights.
 - **Monte Carlo Simulations** for future portfolio value projections.
 - **Risk Metrics**: Sharpe ratio, max drawdown, annualized return & volatility.
@@ -18,24 +18,24 @@ The Portfolio Optimizer Dashboard is an **interactive Streamlit app** designed t
 
 ---
 
-## 📦 Installation
+## Installation
 
 1. Clone the repository:
 ```bash
 git clone https://github.com/tpchiripa/Portifolio-Optimizer_Dashboard.git
 cd Portifolio-Optimizer_Dashboard
-🌐 Deployment
+Deployment
 
 You can deploy this dashboard online using Streamlit Cloud by connecting your GitHub repository. Visitors can run the app instantly via the badge above.
 
-📜 License
+License
 
 This project is licensed under the MIT License — see the LICENSE file for details.
 
-🙌 Author
+ Author
 
 Tichaona Peter Chiripa
- 📧 tpchiripa@gmail.com
+ tpchiripa@gmail.com
 
 LICENSE (MIT)
 MIT License
