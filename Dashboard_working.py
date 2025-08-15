@@ -63,7 +63,11 @@ with st.sidebar:
     init_cap = st.number_input("Initial Capital", value=100000, step=1000)
     n_sims = st.slider("Monte Carlo Simulations", 500, 20000, 5000, 500)
     horizon_days = st.slider("Horizon (trading days)", 63, 756, 252, 21)
-    shock = st.selectbox("Scenario Shock", ["None", "-10% Day 1", "+10% Day 1", "Volatility x1.5"])    
+    shock = st.selectbox("Scenario Shock", ["None", "-10% Day 1", "+10% Day 1", "Volatility x1.5"])
+
+    st.markdown("---")
+    st.subheader("VaR / CVaR Confidence Level")
+    alpha = st.slider("Select confidence level", min_value=0.01, max_value=0.10, value=0.05, step=0.01)
 
     st.markdown("---")
     st.subheader("Optimizer")
@@ -158,7 +162,6 @@ mc_p50 = np.percentile(terminal_values, 50)
 mc_p95 = np.percentile(terminal_values, 95)
 
 # VaR/CVaR (1-day, from historical pf_rets)
-alpha = 0.05
 VaR = norm.ppf(alpha, loc=pf_rets.mean(), scale=pf_rets.std())
 CVaR = pf_rets[pf_rets <= VaR].mean() if (pf_rets <= VaR).any() else np.nan
 
@@ -183,17 +186,19 @@ if do_opt:
     }
 
 # ---------------------------------
-# HEADER
+# HEADER & KPIs (Edited for clarity)
 # ---------------------------------
 st.title("📈 Interactive Portfolio Optimizer Dashboard")
 st.caption(f"Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-# KPI Row
+total_return = pf_cum.iloc[-1] - 1  # cumulative return over period
+annualized_return = ann_ret          # already annualized in your function
+
 k1,k2,k3,k4,k5,k6 = st.columns(6)
 k1.metric("Initial Capital", f"${init_cap:,.0f}")
 k2.metric("Current Value (Backtest)", f"${(init_cap*pf_cum.iloc[-1]):,.0f}")
-k3.metric("Total Return", f"{(pf_cum.iloc[-1]-1)*100:.2f}%")
-k4.metric("Annualized Return", f"{ann_ret*100:.2f}%")
+k3.metric("Total Return (Cumulative)", f"{total_return*100:.2f}%")   # cumulative return
+k4.metric("Annualized Return", f"{annualized_return*100:.2f}%")       # annualized return
 k5.metric("Sharpe (ann)", f"{sharpe_: .2f}")
 k6.metric("Max Drawdown", f"{dd:.2%}")
 
@@ -203,7 +208,7 @@ if sharpe_ > 1: bullets.append("Risk-adjusted performance is solid (Sharpe > 1).
 if bench_cum is not None and pf_cum.iloc[-1] > bench_cum.iloc[-1]:
     bullets.append("Portfolio outperformed benchmark over the selected period.")
 if dd < -0.3: bullets.append("Significant historical drawdown observed; consider diversification.")
-if VaR < -0.02: bullets.append(f"1-day 5% VaR ≈ {VaR:.2%} implies notable short-term downside risk.")
+if VaR < -0.02: bullets.append(f"1-day {int(alpha*100)}% VaR ≈ {VaR:.2%} implies notable short-term downside risk.")
 if do_opt and opt_weights is not None: bullets.append("Optimizer found a higher-Sharpe mix (see Optimizer panel).")
 
 with st.expander("Key Takeaways (auto-generated)", expanded=True):
@@ -213,7 +218,6 @@ with st.expander("Key Takeaways (auto-generated)", expanded=True):
 # ---------------------------------
 # TABS
 # ---------------------------------
-
 tab_overview, tab_risk, tab_sim, tab_methods, tab_opt = st.tabs([
     "Overview",
     "Risk",
@@ -241,8 +245,8 @@ with tab_overview:
 with tab_risk:
     c1, c2, c3 = st.columns(3)
     c1.metric("Annualized Volatility", f"{ann_vol_: .2%}")
-    c2.metric("1-day VaR (5%)", f"{VaR: .2%}")
-    c3.metric("1-day CVaR (5%)", f"{CVaR: .2%}" if not np.isnan(CVaR) else "n/a")
+    c2.metric("1-day VaR", f"{VaR: .2%}")
+    c3.metric("1-day CVaR", f"{CVaR: .2%}" if not np.isnan(CVaR) else "n/a")
 
     st.subheader("Drawdown")
     dd_series = pf_cum/pf_cum.cummax() - 1
@@ -297,8 +301,8 @@ with tab_methods:
         for t in tickers:
             y = asset_rets[t].values
             model = sm.OLS(y, X).fit()
-            alpha, beta = model.params[0], model.params[1]
-            rows.append({"Ticker": t, "Alpha (const)": alpha, "Beta": beta, "R²": model.rsquared})
+            alpha_val, beta_val = model.params[0], model.params[1]
+            rows.append({"Ticker": t, "Alpha (const)": alpha_val, "Beta": beta_val, "R²": model.rsquared})
         # Portfolio vs Benchmark
         model_pf = sm.OLS(pf_rets.values, X).fit()
         rows.append({"Ticker": "Portfolio", "Alpha (const)": model_pf.params[0], "Beta": model_pf.params[1], "R²": model_pf.rsquared})
@@ -308,7 +312,6 @@ with tab_methods:
         st.info("Benchmark not available for regression.")
 
     st.markdown("### Multicollinearity (VIF) among Assets")
-    # VIF expects a feature matrix; use asset returns (standardized)
     Xv = (asset_rets - asset_rets.mean())/asset_rets.std()
     Xv = Xv.dropna()
     vif_rows = []
@@ -362,15 +365,9 @@ with tab_opt:
         opt_pf = portfolio_series(asset_rets, opt_weights)
         opt_cum = (1+opt_pf).cumprod()
         fig, ax = plt.subplots()
-        ax.plot(pf_cum.index, pf_cum.values, label="Current")
-        ax.plot(opt_cum.index, opt_cum.values, label="Optimized")
-        if bench_cum is not None:
-            ax.plot(bench_cum.index, bench_cum.values, label="Benchmark")
-        ax.set_title("Cumulative Performance: Current vs Optimized")
+        ax.plot(pf_cum.index, pf_cum.values, label="Current Portfolio")
+        ax.plot(opt_cum.index, opt_cum.values, label="Optimized Portfolio")
+        if bench_cum is not None: ax.plot(bench_cum.index, bench_cum.values, label="Benchmark")
+        ax.set_title("Cumulative Returns – Current vs Optimized")
         ax.legend()
         st.pyplot(fig)
-
-# ---------------------------------
-# FOOTER NOTES
-# ---------------------------------
-st.caption("This dashboard is for educational purposes, demonstrating interactive portfolio analysis with Monte Carlo simulations, CAPM-style regression, correlation & multicollinearity diagnostics (VIF), and PCA. Not investment advice.")
