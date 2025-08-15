@@ -35,7 +35,7 @@ This project is licensed under the MIT License — see the LICENSE file for deta
 🙌 Author
 
 Tichaona Peter Chiripa
-💼 LinkedIn | 📧 tpchiripa@example.com
+ 📧 tpchiripa@gmail.com
 
 LICENSE (MIT)
 MIT License
